@@ -11,7 +11,7 @@ func TestMain(t *testing.T) {
 		panic(err)
 	}
 	defer file.Close()
-	l := New(file)
+	l := New().SetOutput(file)
 	l.SetTraceEnabled()
 	l.SetFormat(0)
 	// l.UseChan()
@@ -31,7 +31,7 @@ func BenchmarkLog(b *testing.B) {
 		panic(err)
 	}
 	defer file.Close()
-	l := New(file)
+	l := New().SetOutput(file)
 	l.SetTraceEnabled()
 	l.SetFormat(0)
 	// l.SetPC(10)

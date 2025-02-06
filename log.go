@@ -63,6 +63,12 @@ type Logger struct {
 	format   uint8
 }
 
+func (l *Logger) SetOutput(out io.Writer) *Logger {
+	l.out = out
+
+	return l
+}
+
 func (l *Logger) SetFormat(format uint8) error {
 	if format > 1 {
 		return fmt.Errorf("invalid format")
@@ -281,14 +287,14 @@ func (l *Logger) Fatal(v ...any) {
 	os.Exit(1)
 }
 
-func New(out io.Writer) *Logger {
+func New() *Logger {
 	return &Logger{
-		out:      out,
+		out:      os.Stderr,
 		disLevel: LevelInfo,
 	}
 }
 
-var std = New(os.Stderr)
+var std = New()
 
 func Debugf(format string, v ...any) {
 	if std.disLevel > LevelDebug {
