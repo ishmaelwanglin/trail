@@ -58,10 +58,11 @@ type Logger struct {
 		channel  chan *[]byte
 		used     bool
 	}
-	pc       uintptr
-	disLevel uint8
-	trace    bool
-	format   uint8
+	pc        uintptr
+	calldepth int
+	disLevel  uint8
+	trace     bool
+	format    uint8
 }
 
 func (l *Logger) SetOutput(out io.Writer) *Logger {
@@ -130,7 +131,7 @@ func cutFPath3(fp string) string {
 }
 
 // error、fatal打印堆栈
-func (l *Logger) output(pc uintptr, calldepth int, level string, appendOutput func([]byte) []byte) error {
+func (l *Logger) output(pc uintptr, calldepth int, level string, message func() string) error {
 
 	timeStr := time.Now().Local().Format(time.DateTime + ".000")
 
@@ -140,11 +141,11 @@ func (l *Logger) output(pc uintptr, calldepth int, level string, appendOutput fu
 	switch l.format {
 	case JSON:
 		*buf = append(*buf, fmt.Sprintf(`{"time":"%s","level":"%s","message":"`, timeStr, level)...)
-		*buf = appendOutput(*buf)
 	case TXT:
 		*buf = append(*buf, fmt.Sprintf("%s [%s] ", timeStr, level)...)
-		*buf = appendOutput(*buf)
 	}
+
+	*buf = append(*buf, message()...)
 
 	var (
 		file string
@@ -213,9 +214,8 @@ func (l *Logger) Debugf(format string, v ...any) {
 	if l.disLevel > LevelDebug {
 		return
 	}
-
-	l.output(0, 2, DEBUG, func(b []byte) []byte {
-		return fmt.Appendf(b, format, v...)
+	l.output(0, l.calldepth, DEBUG, func() string {
+		return fmt.Sprintf(format, v...)
 	})
 }
 
@@ -223,9 +223,8 @@ func (l *Logger) Debug(v ...any) {
 	if l.disLevel > LevelDebug {
 		return
 	}
-
-	l.output(0, 2, DEBUG, func(b []byte) []byte {
-		return fmt.Append(b, v...)
+	l.output(0, l.calldepth, DEBUG, func() string {
+		return fmt.Sprint(v...)
 	})
 }
 
@@ -233,8 +232,8 @@ func (l *Logger) Infof(format string, v ...any) {
 	if l.disLevel > LevelInfo {
 		return
 	}
-	l.output(0, 2, INFO, func(b []byte) []byte {
-		return fmt.Appendf(b, format, v...)
+	l.output(0, l.calldepth, INFO, func() string {
+		return fmt.Sprintf(format, v...)
 	})
 }
 
@@ -242,8 +241,8 @@ func (l *Logger) Info(v ...any) {
 	if l.disLevel > LevelInfo {
 		return
 	}
-	l.output(0, 2, INFO, func(b []byte) []byte {
-		return fmt.Append(b, v...)
+	l.output(0, l.calldepth, INFO, func() string {
+		return fmt.Sprint(v...)
 	})
 }
 
@@ -251,8 +250,8 @@ func (l *Logger) Warnf(format string, v ...any) {
 	if l.disLevel > LevelWarn {
 		return
 	}
-	l.output(0, 2, WARN, func(b []byte) []byte {
-		return fmt.Appendf(b, format, v...)
+	l.output(0, l.calldepth, WARN, func() string {
+		return fmt.Sprintf(format, v...)
 	})
 }
 
@@ -260,8 +259,8 @@ func (l *Logger) Warn(v ...any) {
 	if l.disLevel > LevelWarn {
 		return
 	}
-	l.output(0, 2, WARN, func(b []byte) []byte {
-		return fmt.Append(b, v...)
+	l.output(0, l.calldepth, WARN, func() string {
+		return fmt.Sprint(v...)
 	})
 }
 
@@ -269,9 +268,8 @@ func (l *Logger) Errorf(format string, v ...any) {
 	if l.disLevel > LevelError {
 		return
 	}
-
-	l.output(l.pc, 2, ERROR, func(b []byte) []byte {
-		return fmt.Appendf(b, format, v...)
+	l.output(l.pc, l.calldepth, ERROR, func() string {
+		return fmt.Sprintf(format, v...)
 	})
 }
 
@@ -279,8 +277,8 @@ func (l *Logger) Error(v ...any) {
 	if l.disLevel > LevelError {
 		return
 	}
-	l.output(l.pc, 2, ERROR, func(b []byte) []byte {
-		return fmt.Append(b, v...)
+	l.output(l.pc, l.calldepth, ERROR, func() string {
+		return fmt.Sprint(v...)
 	})
 }
 
@@ -288,8 +286,8 @@ func (l *Logger) Fatalf(format string, v ...any) {
 	if l.disLevel > LevelFatal {
 		return
 	}
-	l.output(l.pc, 2, FATAL, func(b []byte) []byte {
-		return fmt.Appendf(b, format, v...)
+	l.output(l.pc, l.calldepth, FATAL, func() string {
+		return fmt.Sprintf(format, v...)
 	})
 	os.Exit(1)
 }
@@ -298,20 +296,25 @@ func (l *Logger) Fatal(v ...any) {
 	if l.disLevel > LevelFatal {
 		return
 	}
-	l.output(l.pc, 2, FATAL, func(b []byte) []byte {
-		return fmt.Append(b, v...)
+	l.output(l.pc, l.calldepth, FATAL, func() string {
+		return fmt.Sprint(v...)
 	})
 	os.Exit(1)
 }
 
 func New() *Logger {
 	return &Logger{
-		out:      os.Stderr,
-		disLevel: LevelInfo,
+		out:       os.Stderr,
+		disLevel:  LevelInfo,
+		calldepth: 2,
 	}
 }
 
-var std = New()
+var std = &Logger{
+	out:       os.Stderr,
+	disLevel:  LevelInfo,
+	calldepth: 3,
+}
 
 func SetOutput(out io.Writer) {
 	std.SetOutput(out)
