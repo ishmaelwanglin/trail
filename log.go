@@ -1,6 +1,6 @@
 //go:build linux
 
-package infratrail
+package trail
 
 import (
 	"fmt"

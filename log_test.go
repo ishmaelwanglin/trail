@@ -1,4 +1,4 @@
-package infratrail
+package trail
 
 import (
 	"os"
