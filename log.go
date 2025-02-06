@@ -20,6 +20,7 @@ const (
 	LevelError
 	LevelFatal
 )
+
 const (
 	DEBUG = "debug"
 	INFO  = "info"
@@ -76,10 +77,12 @@ func (l *Logger) SetFormat(format uint8) error {
 	l.format = format
 	return nil
 }
+
 func (l *Logger) CloseChan() {
 	defer recover()
 	close(l.Chan.channel)
 }
+
 func (l *Logger) UseChan() {
 	if l.Chan.cacheLen == 0 {
 		l.Chan.cacheLen = 1 << 7
@@ -96,21 +99,26 @@ func (l *Logger) UseChan() {
 		}
 	}()
 }
+
 func (l *Logger) SetCacheSize(n uint64) {
 	if !l.Chan.used {
 		return
 	}
 	l.Chan.cacheLen = n
 }
+
 func (l *Logger) SetDisplayLevel(level uint8) {
 	l.disLevel = level
 }
+
 func (l *Logger) SetTraceEnabled() {
 	l.trace = true
 }
+
 func (l *Logger) SetPC(pc uintptr) {
 	l.pc = pc
 }
+
 func cutFPath3(fp string) string {
 
 	fps := strings.Split(fp, "/")
@@ -210,6 +218,7 @@ func (l *Logger) Debugf(format string, v ...any) {
 		return fmt.Appendf(b, format, v...)
 	})
 }
+
 func (l *Logger) Debug(v ...any) {
 	if l.disLevel > LevelDebug {
 		return
@@ -219,6 +228,7 @@ func (l *Logger) Debug(v ...any) {
 		return fmt.Append(b, v...)
 	})
 }
+
 func (l *Logger) Infof(format string, v ...any) {
 	if l.disLevel > LevelInfo {
 		return
@@ -227,6 +237,7 @@ func (l *Logger) Infof(format string, v ...any) {
 		return fmt.Appendf(b, format, v...)
 	})
 }
+
 func (l *Logger) Info(v ...any) {
 	if l.disLevel > LevelInfo {
 		return
@@ -235,6 +246,7 @@ func (l *Logger) Info(v ...any) {
 		return fmt.Append(b, v...)
 	})
 }
+
 func (l *Logger) Warnf(format string, v ...any) {
 	if l.disLevel > LevelWarn {
 		return
@@ -243,6 +255,7 @@ func (l *Logger) Warnf(format string, v ...any) {
 		return fmt.Appendf(b, format, v...)
 	})
 }
+
 func (l *Logger) Warn(v ...any) {
 	if l.disLevel > LevelWarn {
 		return
@@ -251,6 +264,7 @@ func (l *Logger) Warn(v ...any) {
 		return fmt.Append(b, v...)
 	})
 }
+
 func (l *Logger) Errorf(format string, v ...any) {
 	if l.disLevel > LevelError {
 		return
@@ -260,6 +274,7 @@ func (l *Logger) Errorf(format string, v ...any) {
 		return fmt.Appendf(b, format, v...)
 	})
 }
+
 func (l *Logger) Error(v ...any) {
 	if l.disLevel > LevelError {
 		return
@@ -268,6 +283,7 @@ func (l *Logger) Error(v ...any) {
 		return fmt.Append(b, v...)
 	})
 }
+
 func (l *Logger) Fatalf(format string, v ...any) {
 	if l.disLevel > LevelFatal {
 		return
@@ -277,6 +293,7 @@ func (l *Logger) Fatalf(format string, v ...any) {
 	})
 	os.Exit(1)
 }
+
 func (l *Logger) Fatal(v ...any) {
 	if l.disLevel > LevelFatal {
 		return
@@ -296,95 +313,62 @@ func New() *Logger {
 
 var std = New()
 
+func SetOutput(out io.Writer) {
+	std.SetOutput(out)
+}
+
+func SetTraceEnabled() {
+	std.SetTraceEnabled()
+}
+
+func SetDisplayLevel(level uint8) {
+	std.disLevel = level
+}
+
+func SetPC(pc uintptr) {
+	std.SetPC(pc)
+}
+
+func SetFormat(format uint8) {
+	std.SetFormat(format)
+}
+
 func Debugf(format string, v ...any) {
-	if std.disLevel > LevelDebug {
-		return
-	}
-
-	std.output(0, 2, DEBUG, func(b []byte) []byte {
-		return fmt.Appendf(b, format, v...)
-	})
+	std.Debugf(format, v...)
 }
+
 func Debug(v ...any) {
-	if std.disLevel > LevelDebug {
-		return
-	}
-
-	std.output(0, 2, DEBUG, func(b []byte) []byte {
-		return fmt.Append(b, v...)
-	})
+	std.Debug(v...)
 }
+
 func Infof(format string, v ...any) {
-	if std.disLevel > LevelInfo {
-		return
-	}
-
-	std.output(0, 2, INFO, func(b []byte) []byte {
-		return fmt.Appendf(b, format, v...)
-	})
+	std.Infof(format, v...)
 }
+
 func Info(v ...any) {
-	if std.disLevel > LevelInfo {
-		return
-	}
-
-	std.output(0, 2, INFO, func(b []byte) []byte {
-		return fmt.Append(b, v...)
-	})
+	std.Info(v...)
 }
+
 func Warnf(format string, v ...any) {
-	if std.disLevel > LevelWarn {
-		return
-	}
-
-	std.output(0, 2, WARN, func(b []byte) []byte {
-		return fmt.Appendf(b, format, v...)
-	})
+	std.Warnf(format, v...)
 }
+
 func Warn(v ...any) {
-	if std.disLevel > LevelWarn {
-		return
-	}
-
-	std.output(0, 2, WARN, func(b []byte) []byte {
-		return fmt.Append(b, v...)
-	})
+	std.Warn(v...)
 }
+
 func Errorf(format string, v ...any) {
-	if std.disLevel > LevelError {
-		return
-	}
-
-	std.output(std.pc, 2, ERROR, func(b []byte) []byte {
-		return fmt.Appendf(b, format, v...)
-	})
+	std.Errorf(format, v...)
 }
+
 func Error(v ...any) {
-	if std.disLevel > LevelError {
-		return
-	}
-
-	std.output(std.pc, 2, ERROR, func(b []byte) []byte {
-		return fmt.Append(b, v...)
-	})
+	std.Error(v...)
 }
+
 func Fatalf(format string, v ...any) {
-	if std.disLevel > LevelFatal {
-		return
-	}
-
-	std.output(std.pc, 2, FATAL, func(b []byte) []byte {
-		return fmt.Appendf(b, format, v...)
-	})
-	os.Exit(1)
+	std.Fatalf(format, v...)
 }
-func Fatal(v ...any) {
-	if std.disLevel > LevelFatal {
-		return
-	}
 
-	std.output(std.pc, 2, FATAL, func(b []byte) []byte {
-		return fmt.Append(b, v...)
-	})
-	os.Exit(1)
+func Fatal(v ...any) {
+	std.Fatal(v...)
 }
