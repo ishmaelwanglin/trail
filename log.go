@@ -21,11 +21,17 @@ const (
 	LevelFatal
 )
 const (
-	DEBUG = " [debug] "
-	INFO  = " [info] "
-	WARN  = " [warn] "
-	ERROR = "  [error] "
-	FATAL = "  [fatal] "
+	DEBUG = "debug"
+	INFO  = "info"
+	WARN  = "warn"
+	ERROR = "error"
+	FATAL = "fatal"
+)
+
+// line format
+const (
+	TXT uint8 = iota
+	JSON
 )
 
 var bufferPool = sync.Pool{New: func() any { return new([]byte) }}
@@ -54,8 +60,16 @@ type Logger struct {
 	pc       uintptr
 	disLevel uint8
 	trace    bool
+	format   uint8
 }
 
+func (l *Logger) SetFormat(format uint8) error {
+	if format > 1 {
+		return fmt.Errorf("invalid format")
+	}
+	l.format = format
+	return nil
+}
 func (l *Logger) CloseChan() {
 	defer recover()
 	close(l.Chan.channel)
@@ -103,49 +117,64 @@ func cutFPath3(fp string) string {
 
 // error、fatal打印堆栈
 func (l *Logger) output(pc uintptr, calldepth int, level string, appendOutput func([]byte) []byte) error {
-	prefix := time.Now().Local().Format(time.DateTime + ".000 ")
-	prefix = prefix + level // timestamp + level
+
+	timeStr := time.Now().Local().Format(time.DateTime + ".000")
+
+	buf := getBuffer()
+	defer putBuffer(buf)
+
+	switch l.format {
+	case JSON:
+		*buf = append(*buf, fmt.Sprintf(`{"time":"%s","level":"%s","message":"`, timeStr, level)...)
+		*buf = appendOutput(*buf)
+	case TXT:
+		*buf = append(*buf, fmt.Sprintf("%s [%s] ", timeStr, level)...)
+		*buf = appendOutput(*buf)
+	}
+
 	var (
 		file string
 		line int
 	)
 
-	buf := getBuffer()
-	defer putBuffer(buf)
-
-	formatHeader(buf, prefix)
-	*buf = appendOutput(*buf)
-	if !l.trace {
-		goto END
-	}
-
-	if pc == 0 {
-		var ok bool
-		_, file, line, ok = runtime.Caller(calldepth)
-		if !ok {
-			file = "???"
-			line = 0
-		} else {
-			file = cutFPath3(file)
+	if l.trace {
+		if l.format == JSON {
+			pc = 0
 		}
 
-		formatCaller(buf, file, line)
-	} else {
-		pcs := make([]uintptr, pc)
-		n := runtime.Callers(calldepth+1, pcs)
-		frames := runtime.CallersFrames(pcs[:n])
-		*buf = append(*buf, "\n[trace dump]"...)
-		for i := 0; i < int(pc); i++ {
-			frame, more := frames.Next()
-			file = cutFPath3(frame.File)
-			*buf = append(*buf, fmt.Sprintf("\n[%#v]::%s::%s:%d", frame.PC, filepath.Base(frame.Function), file, frame.Line)...)
-			if !more {
-				break
+		if pc == 0 {
+			var ok bool
+			_, file, line, ok = runtime.Caller(calldepth)
+			if !ok {
+				file = "???"
+				line = 0
+			} else {
+				file = cutFPath3(file)
+			}
+			switch l.format {
+			case JSON:
+				*buf = append(*buf, fmt.Sprintf(`","caller":"%s:%d"}`, file, line)...)
+			case TXT:
+				*buf = append(*buf, fmt.Sprintf(` - Caller: %s:%d`, file, line)...)
+			}
+		} else {
+			// txt格式
+			pcs := make([]uintptr, pc)
+			n := runtime.Callers(calldepth+1, pcs)
+			frames := runtime.CallersFrames(pcs[:n])
+			*buf = append(*buf, "\n[trace dump]"...)
+			for i := 0; i < int(pc); i++ {
+				frame, more := frames.Next()
+				file = cutFPath3(frame.File)
+				*buf = append(*buf, fmt.Sprintf("\n[%#v]::%s::%s:%d", frame.PC, filepath.Base(frame.Function), file, frame.Line)...)
+				if !more {
+					break
+				}
 			}
 		}
 	}
 
-END: // add a line break
+	// add a line break
 	if len(*buf) == 0 || (*buf)[len(*buf)-1] != '\n' {
 		*buf = append(*buf, '\n')
 	}
@@ -164,12 +193,6 @@ func (l *Logger) writeMessage(m *[]byte) error {
 	}
 	_, err := l.out.Write(*m)
 	return err
-}
-func formatHeader(buf *[]byte, prefix string) {
-	*buf = append(*buf, prefix...)
-}
-func formatCaller(buf *[]byte, file string, line int) {
-	*buf = append(*buf, fmt.Sprintf(" - Caller: %s:%d", file, line)...)
 }
 
 func (l *Logger) Debugf(format string, v ...any) {
@@ -246,7 +269,7 @@ func (l *Logger) Fatalf(format string, v ...any) {
 	l.output(l.pc, 2, FATAL, func(b []byte) []byte {
 		return fmt.Appendf(b, format, v...)
 	})
-	os.Exit(125)
+	os.Exit(1)
 }
 func (l *Logger) Fatal(v ...any) {
 	if l.disLevel > LevelFatal {
@@ -255,7 +278,7 @@ func (l *Logger) Fatal(v ...any) {
 	l.output(l.pc, 2, FATAL, func(b []byte) []byte {
 		return fmt.Append(b, v...)
 	})
-	os.Exit(125)
+	os.Exit(1)
 }
 
 func New(out io.Writer) *Logger {
@@ -347,7 +370,7 @@ func Fatalf(format string, v ...any) {
 	std.output(std.pc, 2, FATAL, func(b []byte) []byte {
 		return fmt.Appendf(b, format, v...)
 	})
-	os.Exit(125)
+	os.Exit(1)
 }
 func Fatal(v ...any) {
 	if std.disLevel > LevelFatal {
@@ -357,5 +380,5 @@ func Fatal(v ...any) {
 	std.output(std.pc, 2, FATAL, func(b []byte) []byte {
 		return fmt.Append(b, v...)
 	})
-	os.Exit(125)
+	os.Exit(1)
 }
