@@ -68,12 +68,12 @@ type Logger struct {
 		channel  chan *[]byte
 		used     bool
 	}
-	pc        uintptr
-	calldepth int
-	disLevel  uint8
-	trace     bool
-	format    uint8
-	level     uint8 // 如果有值，这个logger就是固定的level
+	pc          uintptr
+	calldepth   int
+	disLevel    uint8
+	trace       bool
+	format      uint8
+	staticLevel uint8 // 如果有值，这个logger就是固定的level
 }
 
 func (l *Logger) SetOutput(out io.Writer) *Logger {
@@ -213,7 +213,7 @@ func (l *Logger) output(pc uintptr, calldepth int, level string, message func() 
 }
 
 func (l *Logger) writeMessage(m *[]byte) error {
-	if l.level > 0 {
+	if l.staticLevel > 0 {
 		shareLock()
 		defer shareUnLock()
 	}
@@ -336,19 +336,23 @@ func levelD2S(l uint8) string {
 	}
 }
 func (l *Logger) Println(v ...any) {
-	l.output(l.pc, l.calldepth, levelD2S(l.level), func() string {
+	l.output(l.pc, l.calldepth, levelD2S(l.staticLevel), func() string {
 		return fmt.Sprint(v...)
 	})
 }
 
 func (l *Logger) Printf(format string, v ...any) {
-	l.output(l.pc, l.calldepth, levelD2S(l.level), func() string {
+	l.output(l.pc, l.calldepth, levelD2S(l.staticLevel), func() string {
 		return fmt.Sprintf(format, v...)
 	})
 }
 
 func (l *Logger) Writer() io.Writer {
 	return l.out
+}
+
+func (l *Logger) SetStaticLevel(level uint8) {
+	l.staticLevel = level
 }
 
 func New() *Logger {
