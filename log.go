@@ -351,8 +351,9 @@ func (l *Logger) Writer() io.Writer {
 	return l.out
 }
 
-func (l *Logger) SetStaticLevel(level uint8) {
+func (l *Logger) SetStaticLevel(level uint8) *Logger {
 	l.staticLevel = level
+	return l
 }
 
 func New() *Logger {
