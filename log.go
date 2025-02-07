@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	LevelDebug uint8 = iota
+	LevelNone uint8 = iota
+	LevelDebug
 	LevelInfo
 	LevelWarn
 	LevelError
@@ -22,6 +23,7 @@ const (
 )
 
 const (
+	NONE  = ""
 	DEBUG = "debug"
 	INFO  = "info"
 	WARN  = "warn"
@@ -50,6 +52,14 @@ func putBuffer(p *[]byte) {
 	bufferPool.Put(p)
 }
 
+var muMulti sync.Mutex // 多个logger同时打开一个文件
+func shareLock() {
+	muMulti.Lock()
+}
+func shareUnLock() {
+	muMulti.Unlock()
+}
+
 type Logger struct {
 	out   io.Writer // *os.File
 	outMu sync.Mutex
@@ -63,6 +73,7 @@ type Logger struct {
 	disLevel  uint8
 	trace     bool
 	format    uint8
+	level     uint8 // 如果有值，这个logger就是固定的level
 }
 
 func (l *Logger) SetOutput(out io.Writer) *Logger {
@@ -202,6 +213,10 @@ func (l *Logger) output(pc uintptr, calldepth int, level string, message func() 
 }
 
 func (l *Logger) writeMessage(m *[]byte) error {
+	if l.level > 0 {
+		shareLock()
+		defer shareUnLock()
+	}
 	if !l.Chan.used {
 		l.outMu.Lock()
 		defer l.outMu.Unlock()
@@ -302,6 +317,40 @@ func (l *Logger) Fatal(v ...any) {
 	os.Exit(1)
 }
 
+func levelD2S(l uint8) string {
+	switch l {
+	case LevelNone:
+		return NONE
+	case LevelDebug:
+		return DEBUG
+	case LevelInfo:
+		return INFO
+	case LevelWarn:
+		return WARN
+	case LevelError:
+		return ERROR
+	case LevelFatal:
+		return FATAL
+	default:
+		return NONE
+	}
+}
+func (l *Logger) Println(v ...any) {
+	l.output(l.pc, l.calldepth, levelD2S(l.level), func() string {
+		return fmt.Sprint(v...)
+	})
+}
+
+func (l *Logger) Printf(format string, v ...any) {
+	l.output(l.pc, l.calldepth, levelD2S(l.level), func() string {
+		return fmt.Sprintf(format, v...)
+	})
+}
+
+func (l *Logger) Writer() io.Writer {
+	return l.out
+}
+
 func New() *Logger {
 	return &Logger{
 		out:       os.Stderr,
@@ -374,4 +423,16 @@ func Fatalf(format string, v ...any) {
 
 func Fatal(v ...any) {
 	std.Fatal(v...)
+}
+
+func Println(v ...any) {
+	std.Println(v...)
+}
+
+func Printf(format string, v ...any) {
+	std.Printf(format, v...)
+}
+
+func Writer() io.Writer {
+	return std.out
 }
