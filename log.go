@@ -238,16 +238,17 @@ WRITE:
 }
 
 func (l *Logger) Debugf(format string, v ...any) {
-	if l.disLevel > LevelDebug {
+	if LevelDebug < l.disLevel {
 		return
 	}
+
 	l.output(0, l.calldepth, DEBUG, func() string {
 		return fmt.Sprintf(format, v...)
 	})
 }
 
 func (l *Logger) Debug(v ...any) {
-	if l.disLevel > LevelDebug {
+	if LevelDebug < l.disLevel {
 		return
 	}
 	l.output(0, l.calldepth, DEBUG, func() string {
@@ -256,7 +257,7 @@ func (l *Logger) Debug(v ...any) {
 }
 
 func (l *Logger) Infof(format string, v ...any) {
-	if l.disLevel > LevelInfo {
+	if LevelInfo < l.disLevel {
 		return
 	}
 	l.output(0, l.calldepth, INFO, func() string {
@@ -265,7 +266,7 @@ func (l *Logger) Infof(format string, v ...any) {
 }
 
 func (l *Logger) Info(v ...any) {
-	if l.disLevel > LevelInfo {
+	if LevelInfo < l.disLevel {
 		return
 	}
 	l.output(0, l.calldepth, INFO, func() string {
@@ -274,7 +275,7 @@ func (l *Logger) Info(v ...any) {
 }
 
 func (l *Logger) Warnf(format string, v ...any) {
-	if l.disLevel > LevelWarn {
+	if LevelWarn < l.disLevel {
 		return
 	}
 	l.output(0, l.calldepth, WARN, func() string {
@@ -283,7 +284,7 @@ func (l *Logger) Warnf(format string, v ...any) {
 }
 
 func (l *Logger) Warn(v ...any) {
-	if l.disLevel > LevelWarn {
+	if LevelWarn < l.disLevel {
 		return
 	}
 	l.output(0, l.calldepth, WARN, func() string {
@@ -292,7 +293,7 @@ func (l *Logger) Warn(v ...any) {
 }
 
 func (l *Logger) Errorf(format string, v ...any) {
-	if l.disLevel > LevelError {
+	if LevelError < l.disLevel {
 		return
 	}
 	l.output(l.pc, l.calldepth, ERROR, func() string {
@@ -301,7 +302,7 @@ func (l *Logger) Errorf(format string, v ...any) {
 }
 
 func (l *Logger) Error(v ...any) {
-	if l.disLevel > LevelError {
+	if LevelError < l.disLevel {
 		return
 	}
 	l.output(l.pc, l.calldepth, ERROR, func() string {
@@ -310,7 +311,7 @@ func (l *Logger) Error(v ...any) {
 }
 
 func (l *Logger) Fatalf(format string, v ...any) {
-	if l.disLevel > LevelFatal {
+	if LevelFatal < l.disLevel {
 		return
 	}
 	l.output(l.pc, l.calldepth, FATAL, func() string {
@@ -320,7 +321,7 @@ func (l *Logger) Fatalf(format string, v ...any) {
 }
 
 func (l *Logger) Fatal(v ...any) {
-	if l.disLevel > LevelFatal {
+	if LevelFatal < l.disLevel {
 		return
 	}
 	l.output(l.pc, l.calldepth, FATAL, func() string {
