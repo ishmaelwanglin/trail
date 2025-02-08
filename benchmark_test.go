@@ -12,7 +12,7 @@ func BenchmarkLog(b *testing.B) {
 	}
 	defer file.Close()
 	SetOutput(file)
-	SetTraceEnabled()
+	SetTrace(true)
 	SetPC(10)
 	SetFormat(TXT)
 	// l.SetTraceEnabled()

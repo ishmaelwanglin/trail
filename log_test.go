@@ -1,6 +1,7 @@
 package trail
 
 import (
+	"log"
 	"os"
 	"testing"
 )
@@ -12,7 +13,7 @@ func TestFunc(t *testing.T) {
 	}
 	defer file.Close()
 	l := New().SetOutput(file)
-	l.SetTraceEnabled()
+	l.SetTrace(true)
 	l.SetFormat(0)
 	// l.UseChan()
 	// defer l.CloseChan()
@@ -22,7 +23,8 @@ func TestFunc(t *testing.T) {
 	// l.Warnf("%s", "hala, madrid")
 	// l.Fatalf("%s", "hala, madrid")
 	SetOutput(os.Stderr)
-	SetTraceEnabled()
+	SetTrace(true)
 	Infof("%s", "hala, madrid") // 会panic
 	// <-time.After(1 * time.Second)
+	log.Println()
 }

@@ -53,12 +53,6 @@ func putBuffer(p *[]byte) {
 }
 
 var muMulti sync.Mutex // 多个logger同时打开一个文件
-func shareLock() {
-	muMulti.Lock()
-}
-func shareUnLock() {
-	muMulti.Unlock()
-}
 
 type Logger struct {
 	out   io.Writer // *os.File
@@ -73,7 +67,14 @@ type Logger struct {
 	disLevel    uint8
 	trace       bool
 	format      uint8
-	staticLevel uint8 // 如果有值，这个logger就是固定的level
+	staticLevel uint8 // 如果有值，这个logger就是固定的level,适配mqtt的自带日志logger
+}
+
+func (l *Logger) shareLock() {
+	muMulti.Lock()
+}
+func (l *Logger) shareUnlock() {
+	muMulti.Unlock()
 }
 
 func (l *Logger) SetOutput(out io.Writer) *Logger {
@@ -119,16 +120,22 @@ func (l *Logger) SetCacheSize(n uint64) {
 	l.Chan.cacheLen = n
 }
 
-func (l *Logger) SetDisplayLevel(level uint8) {
+func (l *Logger) SetDisplayLevel(level uint8) *Logger {
 	l.disLevel = level
+
+	return l
 }
 
-func (l *Logger) SetTraceEnabled() {
-	l.trace = true
+func (l *Logger) SetTrace(on bool) *Logger {
+	l.trace = on
+
+	return l
 }
 
-func (l *Logger) SetPC(pc uintptr) {
+func (l *Logger) SetPC(pc uintptr) *Logger {
 	l.pc = pc
+
+	return l
 }
 
 func cutFPath3(fp string) string {
@@ -213,14 +220,19 @@ func (l *Logger) output(pc uintptr, calldepth int, level string, message func() 
 }
 
 func (l *Logger) writeMessage(m *[]byte) error {
-	if l.staticLevel > 0 {
-		shareLock()
-		defer shareUnLock()
+	if l.Chan.used {
+		goto WRITE
 	}
-	if !l.Chan.used {
+
+	if l.staticLevel > LevelNone {
+		l.shareLock()
+		defer l.shareUnlock()
+	} else {
 		l.outMu.Lock()
 		defer l.outMu.Unlock()
 	}
+
+WRITE:
 	_, err := l.out.Write(*m)
 	return err
 }
@@ -374,8 +386,8 @@ func SetOutput(out io.Writer) {
 	std.SetOutput(out)
 }
 
-func SetTraceEnabled() {
-	std.SetTraceEnabled()
+func SetTrace(on bool) {
+	std.SetTrace(on)
 }
 
 func SetDisplayLevel(level uint8) {
