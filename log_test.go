@@ -1,7 +1,6 @@
 package trail
 
 import (
-	"log"
 	"os"
 	"testing"
 )
@@ -13,18 +12,18 @@ func TestFunc(t *testing.T) {
 	}
 	defer file.Close()
 	l := New().SetOutput(file)
-	l.SetTrace(true)
-	l.SetFormat(0)
-	// l.UseChan()
+	l.SetCaller(false)
+
+	l.SetFormat(FormatJson)
+	// l.SetPC(10)
 	// defer l.CloseChan()
-	// l.Errorf("%s", "hala, madrid")
+	l.Errorf("%s", "hala, madrid")
 	l.Infof("%s", "hala, madrid")
-	// l.Debugf("%s", "hala, madrid")
-	// l.Warnf("%s", "hala, madrid")
+	l.Debugf("%s", "hala, madrid")
+	l.Warnf("%s", "hala, madrid")
 	// l.Fatalf("%s", "hala, madrid")
-	SetOutput(os.Stderr)
-	SetTrace(true)
+	// SetOutput(os.Stderr)
+	SetCaller(true)
 	Infof("%s", "hala, madrid") // 会panic
 	// <-time.After(1 * time.Second)
-	log.Println()
 }
