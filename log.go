@@ -182,7 +182,7 @@ func (l *Logger) getCaller(level uint8) *bytes.Buffer {
 }
 
 func (l *Logger) output(level uint8, message func() string) error {
-	if l.levelPriority > l.levelNormal {
+	if l.levelPriority > LevelNone {
 		once.Do(func() { l.levelNormal = l.levelPriority })
 	}
 	if level < l.levelNormal {
