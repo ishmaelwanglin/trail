@@ -40,16 +40,14 @@ const (
 var bufferPool = sync.Pool{New: func() any { return new(bytes.Buffer) }}
 
 func getBuffer() *bytes.Buffer {
-	p := bufferPool.Get().(*bytes.Buffer)
-	// *p = (*p)[:0]
-	p.Reset()
-	return p
+	buf := bufferPool.Get().(*bytes.Buffer)
+	buf.Reset()
+	return buf
 }
-
 func putBuffer(p *bytes.Buffer) {
-	// if cap(p.Cap) > 64<<10 {
-	// 	*p = nil
-	// }
+	if p.Cap() > 64<<10 {
+		return
+	}
 	bufferPool.Put(p)
 }
 
@@ -74,10 +72,7 @@ type Logger struct {
 func (l *Logger) shareLock()   { muMulti.Lock() }
 func (l *Logger) shareUnlock() { muMulti.Unlock() }
 
-func (l *Logger) CloseQueue() {
-	defer recover()
-	close(l.async.queue)
-}
+func (l *Logger) CloseQueue() { defer recover(); close(l.async.queue) }
 func (l *Logger) Async() {
 	if l.async.qlen == 0 {
 		l.async.qlen = 1 << 7
@@ -95,14 +90,8 @@ func (l *Logger) Async() {
 	}()
 }
 
-func (l *Logger) SetCalldepth(n int) *Logger {
-	l.callDepth = n
-	return l
-}
-func (l *Logger) SetOutput(out io.Writer) *Logger {
-	l.out = out
-	return l
-}
+func (l *Logger) SetCalldepth(n int) *Logger      { l.callDepth = n; return l }
+func (l *Logger) SetOutput(out io.Writer) *Logger { l.out = out; return l }
 func (l *Logger) SetFormat(format uint8) error {
 	if format > 1 {
 		return fmt.Errorf("invalid format")
@@ -116,18 +105,9 @@ func (l *Logger) SetCacheSize(n uint64) {
 	}
 	l.async.qlen = n
 }
-func (l *Logger) SetlevelNormal(level uint8) *Logger {
-	l.levelNormal = level
-	return l
-}
-func (l *Logger) SetCaller(on bool) *Logger {
-	l.caller = on
-	return l
-}
-func (l *Logger) SetPC(pc uintptr) *Logger {
-	l.pc = pc
-	return l
-}
+func (l *Logger) SetlevelNormal(level uint8) *Logger { l.levelNormal = level; return l }
+func (l *Logger) SetCaller(on bool) *Logger          { l.caller = on; return l }
+func (l *Logger) SetPC(pc uintptr) *Logger           { l.pc = pc; return l }
 
 func cutFilePath3(fp string) string {
 	fps := strings.Split(fp, "/")
