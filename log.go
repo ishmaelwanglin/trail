@@ -48,6 +48,7 @@ func putBuffer(p *bytes.Buffer) {
 	if p.Cap() > 64<<10 {
 		return
 	}
+	p.Reset()
 	bufferPool.Put(p)
 }
 
