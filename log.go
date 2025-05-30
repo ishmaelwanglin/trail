@@ -266,12 +266,15 @@ func (l *Logger) Println(v ...any) {
 func (l *Logger) Printf(format string, v ...any) {
 	l.output(l.levelPriority, func() string { return fmt.Sprintf(format, v...) })
 }
+func (l *Logger) Print(v ...any) {
+	l.output(l.levelPriority, func() string { return fmt.Sprint(v...) })
+}
+
 func (l *Logger) Writer() io.Writer { return l.out }
 func (l *Logger) SetlevelPriority(level uint8) *Logger {
 	l.levelPriority = level
 	return l
 }
-
 func New() *Logger {
 	return &Logger{
 		out:           os.Stderr,
@@ -301,4 +304,5 @@ func Fatalf(format string, v ...any) { std.Fatalf(format, v...) }
 func Fatal(v ...any)                 { std.Fatal(v...) }
 func Println(v ...any)               { std.Println(v...) }
 func Printf(format string, v ...any) { std.Printf(format, v...) }
+func Print(format string, v ...any)  { std.Print(v...) }
 func Writer() io.Writer              { return std.out }
